@@ -9,8 +9,11 @@ public class ClientHandler implements Callable<Boolean> {
     private final Socket clientSocket;
     private final LinesReader linesReader;
 
-    // TODO:I builder
-    ClientHandler(String name, Socket clientSocket, LinesReader linesReader) {
+    public static ClientHandler create(String name, Socket clientSocket, LinesReader linesReader) {
+        return new ClientHandler(name, clientSocket, linesReader);
+    }
+
+    private ClientHandler(String name, Socket clientSocket, LinesReader linesReader) {
         this.name = name;
         this.clientSocket = clientSocket;
         this.linesReader = linesReader;

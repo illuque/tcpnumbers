@@ -1,21 +1,16 @@
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.*;
 
 public class TcpServer {
 
-    private static final String TERMINATION_SEQUENCE = "terminate";
-
     private final List<Socket> allClientSockets;
 
     private final List<Future<Boolean>> allClientFutures;
-
-    private final Set<Integer> uniqueNumbersSet;
 
     private final ExecutorService executor;
 
@@ -23,20 +18,22 @@ public class TcpServer {
 
     private final int maxClients;
 
-    public static TcpServer create(int port, int maxClients) {
-        return new TcpServer(port, maxClients);
+    private final LinesReader linesReader;
+
+    public static TcpServer create(int port, int maxClients, LinesReader linesReader) {
+        return new TcpServer(port, maxClients, linesReader);
     }
 
-    private TcpServer(int port, int maxClients) {
+    private TcpServer(int port, int maxClients, LinesReader linesReader) {
         this.maxClients = maxClients;
-
-        this.uniqueNumbersSet = Collections.synchronizedSet(new HashSet<>());
 
         this.allClientFutures = new CopyOnWriteArrayList<>();
         this.allClientSockets = new ArrayList<>();
 
         this.serverSocket = createSocket(port);
         this.executor = Executors.newFixedThreadPool(maxClients);
+
+        this.linesReader = linesReader;
     }
 
     public void start() {
@@ -48,6 +45,17 @@ public class TcpServer {
         }
     }
 
+    private ServerSocket createSocket(int port) {
+        ServerSocket serverSocket = null;
+        try {
+            serverSocket = new ServerSocket(port);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(-1);
+        }
+        return serverSocket;
+    }
+
     private void initClientStatusListenerThread() {
         Thread statusListenerThread = new Thread(() -> {
             while (true) {
@@ -56,6 +64,28 @@ public class TcpServer {
         });
 
         statusListenerThread.start();
+    }
+
+    private void initClientConnectionsListenerThread() throws IOException {
+        int i = 0;
+        while (true) {
+            i++;
+            String clientName = "#" + i;
+
+            Socket clientSocket;
+            try {
+                clientSocket = serverSocket.accept();
+            } catch (SocketException se) {
+                System.out.printf("Server was closed by one of the clients%s", System.lineSeparator());
+                return;
+            }
+
+            if (allClientFutures.size() == maxClients) {
+                rejectClient(clientSocket);
+            } else {
+                acceptClient(clientName, clientSocket);
+            }
+        }
     }
 
     private boolean anyClientForcedTermination() {
@@ -76,52 +106,6 @@ public class TcpServer {
         return false;
     }
 
-    private void initClientConnectionsListenerThread() throws IOException {
-        try (FileWriter fileWriter = new FileWriter(generateNewFile(), true)) {
-            int i = 0;
-            while (true) {
-                i++;
-                String clientName = "#" + i;
-
-                Socket clientSocket;
-                try {
-                    clientSocket = serverSocket.accept();
-                } catch (SocketException se) {
-                    System.out.printf("Server was closed by one of the clients%s", System.lineSeparator());
-                    return;
-                }
-
-                if (allClientFutures.size() == maxClients) {
-                    rejectClient(clientSocket);
-                } else {
-                    acceptClient(fileWriter, clientName, clientSocket);
-                }
-            }
-        }
-    }
-
-    private ServerSocket createSocket(int port) {
-        ServerSocket serverSocket = null;
-        try {
-            serverSocket = new ServerSocket(port);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
-        return serverSocket;
-    }
-
-    private static File generateNewFile() throws IOException {
-        File outputFile = new File("numbers.log").getAbsoluteFile();
-        if (outputFile.exists()) {
-            outputFile.delete();
-        }
-
-        outputFile.createNewFile();
-
-        return outputFile;
-    }
-
     private void rejectClient(Socket clientSocket) {
         try {
             clientSocket.close();
@@ -130,9 +114,8 @@ public class TcpServer {
         }
     }
 
-    private void acceptClient(FileWriter fileWriter, String clientName, Socket clientSocket) {
-        LinesReader linesReader = LinesReader.create(TERMINATION_SEQUENCE, uniqueNumbersSet, fileWriter);
-        ClientHandler clientHandler = new ClientHandler(clientName, clientSocket, linesReader);
+    private void acceptClient(String clientName, Socket clientSocket) {
+        ClientHandler clientHandler = ClientHandler.create(clientName, clientSocket, linesReader);
 
         allClientSockets.add(clientSocket);
         allClientFutures.add(executor.submit(clientHandler));
