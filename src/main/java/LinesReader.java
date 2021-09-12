@@ -10,8 +10,11 @@ public class LinesReader {
     private final Set<Integer> uniqueNumbersSet;
     private final OutputStreamWriter outputStreamWriter;
 
-    // TODO:I sacar interfaz?
-    public LinesReader(String terminateSequence, Set<Integer> uniqueNumbersSet, OutputStreamWriter outputStreamWriter) {
+    public static LinesReader create(String terminateSequence, Set<Integer> uniqueNumbersSet, OutputStreamWriter outputStreamWriter) {
+        return new LinesReader(terminateSequence, uniqueNumbersSet, outputStreamWriter);
+    }
+
+    private LinesReader(String terminateSequence, Set<Integer> uniqueNumbersSet, OutputStreamWriter outputStreamWriter) {
         this.terminateSequence = terminateSequence;
         this.uniqueNumbersSet = uniqueNumbersSet;
         this.outputStreamWriter = outputStreamWriter;
@@ -41,7 +44,6 @@ public class LinesReader {
 
             boolean isNew = uniqueNumbersSet.add(validNumber);
             if (isNew) {
-                System.out.printf("\tAdding: %d%s", validNumber, System.lineSeparator());
                 outputStreamWriter.append(validNumber.toString()).append(System.lineSeparator());
             }
         }
