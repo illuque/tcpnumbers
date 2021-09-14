@@ -1,22 +1,22 @@
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.util.Scanner;
-import java.util.Set;
 
 public class LinesReader {
 
-    public static final int VALID_INPUT_LENGTH = 9;
+    private static final int VALID_INPUT_LENGTH = 9;
+
     private final String terminateSequence;
-    private final Set<Integer> uniqueNumbersSet;
+    private final NumbersApprover numbersApprover;
     private final OutputStreamWriter outputStreamWriter;
 
-    public static LinesReader create(String terminateSequence, Set<Integer> uniqueNumbersSet, OutputStreamWriter outputStreamWriter) {
-        return new LinesReader(terminateSequence, uniqueNumbersSet, outputStreamWriter);
+    public static LinesReader create(String terminateSequence, NumbersApprover numbersApprover, OutputStreamWriter outputStreamWriter) {
+        return new LinesReader(terminateSequence, numbersApprover, outputStreamWriter);
     }
 
-    private LinesReader(String terminateSequence, Set<Integer> uniqueNumbersSet, OutputStreamWriter outputStreamWriter) {
+    private LinesReader(String terminateSequence, NumbersApprover numbersApprover, OutputStreamWriter outputStreamWriter) {
         this.terminateSequence = terminateSequence;
-        this.uniqueNumbersSet = uniqueNumbersSet;
+        this.numbersApprover = numbersApprover;
         this.outputStreamWriter = outputStreamWriter;
     }
 
@@ -31,7 +31,6 @@ public class LinesReader {
                 break;
             }
 
-            // TODO:I terminate all clients on this situation!
             terminateSequenceReceived = terminateSequence.equals(line);
             if (terminateSequenceReceived) {
                 break;
@@ -42,9 +41,13 @@ public class LinesReader {
                 break;
             }
 
-            boolean isNew = uniqueNumbersSet.add(validNumber);
-            if (isNew) {
-                outputStreamWriter.append(validNumber.toString()).append(System.lineSeparator());
+            boolean accepted = numbersApprover.add(validNumber);
+            if (accepted) {
+                String logLine = validNumber + System.lineSeparator();
+
+                // TODO:I intentar matar el outputStreamWriter de último para q si leyó uno lo pueda escribir
+
+                outputStreamWriter.append(logLine);
             }
         }
 

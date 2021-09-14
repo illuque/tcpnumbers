@@ -1,9 +1,7 @@
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 public class Application {
 
@@ -13,13 +11,18 @@ public class Application {
 
     public static void main(String[] args) throws IOException {
         try (FileWriter fileWriter = new FileWriter(generateNewFile(), true)) {
-            Set<Integer> uniqueNumbersSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
+            NumbersApprover numbersApprover = NumbersApprover.getInstance();
 
-            LinesReader linesReader = LinesReader.create(TERMINATION_SEQUENCE, uniqueNumbersSet, fileWriter);
+            // TODO:I hacer rebase para meter esto donde tocaba
+            Supplier<LinesReader> linesReaderCreator = () -> LinesReader.create(TERMINATION_SEQUENCE, numbersApprover, fileWriter);
 
-            TcpServer tcpServer = TcpServer.create(PORT, MAX_CLIENTS, linesReader);
+            TcpServer tcpServer = TcpServer.create(PORT, MAX_CLIENTS, linesReaderCreator);
 
             tcpServer.start();
+
+            // TODO:I intentar q no se cierre el fileWriter hasta q de verdad el resto de procesos terminaron
+
+            numbersApprover.shutDown();
         }
     }
 

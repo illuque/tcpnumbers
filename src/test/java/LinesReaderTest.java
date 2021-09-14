@@ -1,13 +1,16 @@
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
 class LinesReaderTest {
@@ -28,11 +31,16 @@ class LinesReaderTest {
 
     private OutputStreamWriter outputStreamWriter;
 
+    @Mock
+    private NumbersApprover numbersApprover;
+
+    // TODO:I check for duplicates
+
     @BeforeEach
     private void init() {
         outputStream = new ByteArrayOutputStream();
         outputStreamWriter = new OutputStreamWriter(outputStream);
-        linesReaderToTest = LinesReader.create(TERMINATE_SEQUENCE, new HashSet<>(), outputStreamWriter);
+        linesReaderToTest = LinesReader.create(TERMINATE_SEQUENCE, numbersApprover, outputStreamWriter);
     }
 
     @Test

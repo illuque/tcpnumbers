@@ -27,7 +27,6 @@ public class ClientHandler implements Callable<Boolean> {
         }
 
         try (Scanner inputScanner = new Scanner(clientSocket.getInputStream(), StandardCharsets.UTF_8)) {
-            System.out.printf("Client %s closed%s", this.name, System.lineSeparator());
             return linesReader.read(inputScanner);
         } catch (IOException e) {
             e.printStackTrace();

@@ -5,6 +5,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.function.Supplier;
 
 public class TcpServer {
 
@@ -18,13 +19,13 @@ public class TcpServer {
 
     private final int maxClients;
 
-    private final LinesReader linesReader;
+    private final Supplier<LinesReader> linesReaderCreator;
 
-    public static TcpServer create(int port, int maxClients, LinesReader linesReader) {
-        return new TcpServer(port, maxClients, linesReader);
+    public static TcpServer create(int port, int maxClients, Supplier<LinesReader> linesReaderCreator) {
+        return new TcpServer(port, maxClients, linesReaderCreator);
     }
 
-    private TcpServer(int port, int maxClients, LinesReader linesReader) {
+    private TcpServer(int port, int maxClients, Supplier<LinesReader> linesReaderCreator) {
         this.maxClients = maxClients;
 
         this.allClientFutures = new CopyOnWriteArrayList<>();
@@ -33,7 +34,7 @@ public class TcpServer {
         this.serverSocket = createSocket(port);
         this.executor = Executors.newFixedThreadPool(maxClients);
 
-        this.linesReader = linesReader;
+        this.linesReaderCreator = linesReaderCreator;
     }
 
     public void start() {
@@ -96,6 +97,7 @@ public class TcpServer {
                     shutDown();
                     return true;
                 }
+                // TODO:I esto hace falta? no se quita sólo al terminar?
                 if (f.isDone()) {
                     allClientFutures.remove(f);
                 }
@@ -115,13 +117,14 @@ public class TcpServer {
     }
 
     private void acceptClient(String clientName, Socket clientSocket) {
-        ClientHandler clientHandler = ClientHandler.create(clientName, clientSocket, linesReader);
-
+        ClientHandler clientHandler = ClientHandler.create(clientName, clientSocket, linesReaderCreator.get());
         allClientSockets.add(clientSocket);
         allClientFutures.add(executor.submit(clientHandler));
     }
 
     public synchronized void shutDown() throws IOException {
+        // TODO:I ver si puedo llamar a shutDown del clientHandler para q pare de recibir líneas antes de matar los sockets
+
         executor.shutdown();
 
         for (Socket clientSocket : allClientSockets) {
