@@ -1,9 +1,10 @@
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.function.Supplier;
 
 public class Application {
+
+    private static final String OUTPUT_FILENAME = "numbers.log";
 
     private static final String TERMINATION_SEQUENCE = "terminate";
     private static final int PORT = 4000;
@@ -13,21 +14,20 @@ public class Application {
         try (FileWriter fileWriter = new FileWriter(generateNewFile(), true)) {
             NumbersApprover numbersApprover = NumbersApprover.getInstance();
 
-            // TODO:I hacer rebase para meter esto donde tocaba
-            Supplier<LinesReader> linesReaderCreator = () -> LinesReader.create(TERMINATION_SEQUENCE, numbersApprover, fileWriter);
+            LinesReader linesReader = LinesReader.create(TERMINATION_SEQUENCE, numbersApprover, fileWriter);
 
-            TcpServer tcpServer = TcpServer.create(PORT, MAX_CLIENTS, linesReaderCreator);
+            Server server = Server.create(PORT, MAX_CLIENTS, linesReader);
 
-            tcpServer.start();
+            numbersApprover.initReporter();
 
-            // TODO:I intentar q no se cierre el fileWriter hasta q de verdad el resto de procesos terminaron
+            server.start();
 
-            numbersApprover.shutDown();
+            numbersApprover.shutDownReporter();
         }
     }
 
     private static File generateNewFile() throws IOException {
-        File outputFile = new File("numbers.log").getAbsoluteFile();
+        File outputFile = new File(OUTPUT_FILENAME).getAbsoluteFile();
 
         if (outputFile.exists() && !outputFile.delete()) {
             throw new IllegalStateException("Could not create file");

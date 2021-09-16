@@ -20,38 +20,33 @@ public class LinesReader {
         this.outputStreamWriter = outputStreamWriter;
     }
 
-    public boolean read(Scanner inputScanner) throws IOException {
-        boolean terminateSequenceReceived = false;
-
+    public ClientResult read(Scanner inputScanner) throws IOException {
         while (inputScanner.hasNextLine()) {
             String line = inputScanner.nextLine();
 
             boolean isValidLength = line.length() == VALID_INPUT_LENGTH;
             if (!isValidLength) {
-                break;
+                return ClientResult.INVALID_INPUT;
             }
 
-            terminateSequenceReceived = terminateSequence.equals(line);
+            boolean terminateSequenceReceived = terminateSequence.equals(line);
             if (terminateSequenceReceived) {
-                break;
+                return ClientResult.FORCED_TERMINATION;
             }
 
             Integer validNumber = getLineAsNumber(line);
             if (validNumber == null) {
-                break;
+                return ClientResult.INVALID_INPUT;
             }
 
             boolean accepted = numbersApprover.add(validNumber);
             if (accepted) {
                 String logLine = validNumber + System.lineSeparator();
-
-                // TODO:I intentar matar el outputStreamWriter de último para q si leyó uno lo pueda escribir
-
                 outputStreamWriter.append(logLine);
             }
         }
 
-        return terminateSequenceReceived;
+        return ClientResult.READ_EXHAUSTED;
     }
 
     private Integer getLineAsNumber(String line) {

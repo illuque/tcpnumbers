@@ -4,6 +4,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+// TODO:I properly test
 public class NumbersApprover {
 
     private static final int REPORT_FREQUENCY_IN_SECONDS = 10;
@@ -30,9 +31,7 @@ public class NumbersApprover {
         this.totalUniqueNumbers = new AtomicInteger(0);
         this.uniqueNumbersInRound = new AtomicInteger(0);
         this.duplicateNumbersInRound = new AtomicInteger(0);
-        this.reporterEnabled = true;
-
-        this.initReporterThread();
+        this.reporterEnabled = false;
     }
 
     public boolean add(int number) {
@@ -47,7 +46,12 @@ public class NumbersApprover {
         return isNew;
     }
 
-    public void shutDown() {
+    public void initReporter() {
+        reporterEnabled = true;
+        this.initReporterThread();
+    }
+
+    public void shutDownReporter() {
         reporterEnabled = false;
     }
 

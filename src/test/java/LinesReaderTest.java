@@ -47,10 +47,10 @@ class LinesReaderTest {
     void read_whenNoLinesReceived_thenNothingReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(new String[]{}));
 
-        boolean terminateReceived = linesReaderToTest.read(scanner);
+        ClientResult clientResult = linesReaderToTest.read(scanner);
         outputStreamWriter.flush();
 
-        Assertions.assertFalse(terminateReceived);
+        Assertions.assertEquals(ClientResult.READ_EXHAUSTED, clientResult);
         Assertions.assertEquals("", outputStream.toString());
     }
 
@@ -58,13 +58,13 @@ class LinesReaderTest {
     void read_whenTerminateReceived_thenLinesBeforeItReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_TERMINATION));
 
-        boolean terminateReceived = linesReaderToTest.read(scanner);
+        ClientResult clientResult = linesReaderToTest.read(scanner);
         outputStreamWriter.flush();
 
         List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_WITH_TERMINATION, 0, 2));
         String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
 
-        Assertions.assertTrue(terminateReceived);
+        Assertions.assertEquals(ClientResult.FORCED_TERMINATION, clientResult);
         Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
@@ -72,13 +72,13 @@ class LinesReaderTest {
     void read_whenFakeTerminateReceived_thenLinesBeforeItReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_FAKE_TERMINATION));
 
-        boolean terminateReceived = linesReaderToTest.read(scanner);
+        ClientResult clientResult = linesReaderToTest.read(scanner);
         outputStreamWriter.flush();
 
         List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_WITH_TERMINATION, 0, 2));
         String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
 
-        Assertions.assertFalse(terminateReceived);
+        Assertions.assertEquals(ClientResult.INVALID_INPUT, clientResult);
         Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
@@ -86,13 +86,13 @@ class LinesReaderTest {
     void read_whenInvalidInputReceived_thenLinesBeforeItReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_FAKE_TERMINATION));
 
-        boolean terminateReceived = linesReaderToTest.read(scanner);
+        ClientResult clientResult = linesReaderToTest.read(scanner);
         outputStreamWriter.flush();
 
         List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_INVALID, 0, 2));
         String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
 
-        Assertions.assertFalse(terminateReceived);
+        Assertions.assertEquals(ClientResult.INVALID_INPUT, clientResult);
         Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
@@ -100,13 +100,13 @@ class LinesReaderTest {
     void read_whenNoTerminateReceived_thenAllLinesReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITHOUT_TERMINATION));
 
-        boolean terminateReceived = linesReaderToTest.read(scanner);
+        ClientResult clientResult = linesReaderToTest.read(scanner);
         outputStreamWriter.flush();
 
         List<String> validLines = Arrays.asList(INPUT_WITHOUT_TERMINATION);
         String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
 
-        Assertions.assertFalse(terminateReceived);
+        Assertions.assertEquals(ClientResult.READ_EXHAUSTED, clientResult);
         Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
