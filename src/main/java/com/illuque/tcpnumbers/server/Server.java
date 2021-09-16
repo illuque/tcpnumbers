@@ -24,6 +24,8 @@ public class Server {
 
     private final LinesProcessor linesProcessor;
 
+    private volatile boolean disconnectionReceived;
+
     public static Server create(int port, int maxClients, LinesProcessor linesProcessor) {
         return new Server(port, maxClients, linesProcessor);
     }
@@ -41,6 +43,8 @@ public class Server {
 
     public void start() {
         try {
+            disconnectionReceived = false;
+
             initClientStatusListenerThread();
 
             listenClientConnections();
@@ -73,6 +77,7 @@ public class Server {
                         activeClients.remove(client);
                     }
                     if (clientForcedTermination(client)) {
+                        disconnectionReceived = true;
                         shutDown();
                         return;
                     }
@@ -93,7 +98,12 @@ public class Server {
             try {
                 clientSocket = serverSocket.accept();
             } catch (SocketException se) {
-                System.out.printf("Client requested termination%s", System.lineSeparator());
+                if (disconnectionReceived) {
+                    // shutDown() was called and the serverSocket.close() caused this exception
+                    System.out.printf("Client requested termination, closing server%s", System.lineSeparator());
+                } else {
+                    System.err.printf("Server was unexpectedly closed: %s%s", se.getMessage(), System.lineSeparator());
+                }
                 return;
             }
 
@@ -101,7 +111,7 @@ public class Server {
             if (maxClientsReached) {
                 rejectClient(clientSocket);
             } else {
-                acceptAndStartClient(clientName, clientSocket);
+                acceptClient(clientName, clientSocket);
             }
         }
     }
@@ -134,7 +144,7 @@ public class Server {
         }
     }
 
-    private void acceptAndStartClient(String clientName, Socket clientSocket) {
+    private void acceptClient(String clientName, Socket clientSocket) {
         Client client = Client.create(clientName, clientSocket, linesProcessor);
         client.schedule(clientExecutorService);
         activeClients.add(client);

@@ -32,7 +32,7 @@ public class TcpNumbers {
     }
 
     public void start() throws IOException {
-        try (BufferedWriter bufferedWriter = generateBufferedFileWriter()) {
+        try (BufferedWriter bufferedFileWriter = generateBufferedFileWriter()) {
             NumbersCollector numbersCollector = NumbersCollector.create();
 
             LinesProcessor linesProcessor = LinesProcessor.create(TERMINATION_SEQUENCE, numbersCollector);
@@ -41,8 +41,8 @@ public class TcpNumbers {
 
             keepRunning = true;
 
-            initFileWriterThread(bufferedWriter, numbersCollector);
-            initReporterThread(numbersCollector);
+            initFileWriterConsumerThread(bufferedFileWriter, numbersCollector);
+            initReporterConsumerThread(numbersCollector);
 
             server.start();
 
@@ -50,7 +50,7 @@ public class TcpNumbers {
         }
     }
 
-    private void initFileWriterThread(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {
+    private void initFileWriterConsumerThread(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {
         Runnable runnable = () -> {
             long lastReadTimestamp = -1;
             while (keepRunning) {
@@ -77,7 +77,7 @@ public class TcpNumbers {
         bufferedWriter.append(logLine);
     }
 
-    private void initReporterThread(NumbersCollector numbersCollector) {
+    private void initReporterConsumerThread(NumbersCollector numbersCollector) {
         Runnable runnable = () -> {
             while (keepRunning) {
                 try {
