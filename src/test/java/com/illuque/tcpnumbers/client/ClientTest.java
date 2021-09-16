@@ -1,29 +1,24 @@
 package com.illuque.tcpnumbers.client;
 
 import com.illuque.tcpnumbers.LinesProcessor;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.*;
-import java.net.ServerSocket;
+import java.io.IOException;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.*;
 
-import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-// TODO:I properly test
+@ExtendWith(MockitoExtension.class)
 class ClientTest {
-
-    private static final String[] INPUT = new String[]{"1", "2", "3", "4", "5", "terminate", "6", "7", "8", "9"};
-
-    public static final String TERMINATION_SEQUENCE = "terminate";
-
-    @Mock
-    private ServerSocket mockServerSocket;
 
     @Mock
     private Socket mockClientSocket;
@@ -34,66 +29,75 @@ class ClientTest {
     private Client clientToTest;
 
     @BeforeEach
-    void setUp() throws IOException {
-        when(mockServerSocket.accept()).thenReturn(mockClientSocket);
-
-        PipedOutputStream oStream = new PipedOutputStream();
-        when(mockClientSocket.getOutputStream()).thenReturn(oStream);
-
-        PipedInputStream iStream = new PipedInputStream(oStream);
-        when(mockClientSocket.getInputStream()).thenReturn(iStream);
-
-        when(mockClientSocket.isClosed()).thenReturn(false);
-
+    void setUp() {
         clientToTest = Client.create("#1", mockClientSocket, linesProcessor);
     }
 
-    @AfterEach
-    void tearDown() throws IOException {
-        mockClientSocket.close();
-        mockServerSocket.close();
+    @Test
+    void call_whenInvalidInputReceived_thenReturn() throws IOException {
+        PipedOutputStream oStream = new PipedOutputStream();
+        PipedInputStream iStream = new PipedInputStream(oStream);
+        when(mockClientSocket.getInputStream()).thenReturn(iStream);
+
+        when(linesProcessor.read(any())).thenReturn(ClientResult.INVALID_INPUT);
+        assertEquals(ClientResult.INVALID_INPUT, clientToTest.call());
     }
 
     @Test
-    void run_whenTerminationSequenceReceived_thenThreadFinishes() throws IOException, InterruptedException, ExecutionException {
-        OutputStreamWriter clientOutputStream = new OutputStreamWriter(mockClientSocket.getOutputStream(), StandardCharsets.UTF_8);
-        PrintWriter clientOutputPrinter = new PrintWriter(clientOutputStream, true);
+    void call_whenErrorReading_thenReturn() throws IOException {
+        PipedOutputStream oStream = new PipedOutputStream();
+        PipedInputStream iStream = new PipedInputStream(oStream);
+        when(mockClientSocket.getInputStream()).thenReturn(iStream);
+
+        when(linesProcessor.read(any())).thenThrow(new IOException("boom"));
+        assertEquals(ClientResult.ERROR_READING, clientToTest.call());
+    }
+
+    @Test
+    void call_whenSocketClosed_thenClientDisconnected() {
+        when(mockClientSocket.isClosed()).thenReturn(true);
+        assertEquals(ClientResult.CLIENT_DISCONNECTED, clientToTest.call());
+    }
+
+    @Test
+    void schedule() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        assertDoesNotThrow(() -> clientToTest.schedule(executor));
+    }
+
+    @Test
+    void disconnect() throws IOException {
+        clientToTest.disconnect();
+        verify(mockClientSocket, times(1)).close();
+    }
+
+    @Test
+    void isDone_trueWhenFinished() throws ExecutionException, InterruptedException {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        clientToTest.schedule(executor);
+        executor.awaitTermination(300, TimeUnit.MILLISECONDS);
+        assertTrue(clientToTest.isDone());
+    }
+
+    @Test
+    void isDone_falseWhenInProgress() throws ExecutionException, InterruptedException {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        clientToTest.schedule(executor);
+        assertFalse(clientToTest.isDone());
+    }
+
+    @Test
+    void receivedTerminationFlag_trueWhenReceived() throws IOException, InterruptedException, ExecutionException {
+        PipedOutputStream oStream = new PipedOutputStream();
+        PipedInputStream iStream = new PipedInputStream(oStream);
+        when(mockClientSocket.getInputStream()).thenReturn(iStream);
+
+        when(linesProcessor.read(any())).thenReturn(ClientResult.FORCED_TERMINATION);
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<?> future = executor.submit(new Thread((Runnable) clientToTest));
+        clientToTest.schedule(executor);
+        executor.awaitTermination(300, TimeUnit.MILLISECONDS);
 
-        int messageThroughputInMillis = 1;
-        senderMessagesInThread(clientOutputPrinter, messageThroughputInMillis);
-
-        try {
-            long enoughTimeForCommunicationToFinish = INPUT.length * messageThroughputInMillis * 2L;
-            future.get(enoughTimeForCommunicationToFinish, TimeUnit.SECONDS);
-        } catch (TimeoutException e) {
-            future.cancel(true);
-            fail("future should be already finished");
-        }
-        executor.shutdownNow();
+        assertTrue(clientToTest.receivedTerminationFlag());
     }
-
-    private void senderMessagesInThread(PrintWriter out, int messageThroughputInMillis) {
-        Thread sendMessageThread = new Thread(() -> {
-            boolean terminationReached = false;
-            for (String s : INPUT) {
-                out.println(s);
-                if (terminationReached) {
-                    fail("This message should not be sent");
-                }
-                if (s.equals(TERMINATION_SEQUENCE)) {
-                    terminationReached = true;
-                }
-                try {
-                    Thread.sleep(messageThroughputInMillis);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-        sendMessageThread.start();
-    }
-
 }

@@ -10,10 +10,11 @@ import java.util.concurrent.TimeUnit;
 
 public class TcpNumbers {
 
-    private static final String OUTPUT_FILENAME = "numbers.log";
+    protected static final String OUTPUT_FILENAME = "numbers.log";
     private static final int REPORT_FREQUENCY_IN_SECONDS = 10;
 
     private static final String TERMINATION_SEQUENCE = "terminate";
+    private static final int INACTIVITY_TO_FLUSH_MILLIS = 1000;
 
     private volatile boolean keepRunning;
 
@@ -21,15 +22,18 @@ public class TcpNumbers {
 
     private final int maxClients;
 
-    public TcpNumbers(int port, int maxClients) {
+    public static TcpNumbers create(int port, int maxClients) {
+        return new TcpNumbers(port, maxClients);
+    }
+
+    private TcpNumbers(int port, int maxClients) {
         this.port = port;
         this.maxClients = maxClients;
     }
 
     public void start() throws IOException {
         try (BufferedWriter bufferedWriter = generateBufferedFileWriter()) {
-
-            NumbersCollector numbersCollector = NumbersCollector.getInstance();
+            NumbersCollector numbersCollector = NumbersCollector.create();
 
             LinesProcessor linesProcessor = LinesProcessor.create(TERMINATION_SEQUENCE, numbersCollector);
 
@@ -48,15 +52,15 @@ public class TcpNumbers {
 
     private void initFileWriterThread(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {
         Runnable runnable = () -> {
-            long lastRead = -1;
+            long lastReadTimestamp = -1;
             while (keepRunning) {
                 Integer number = numbersCollector.pollNumber();
                 try {
                     if (number != null) {
-                        lastRead = System.currentTimeMillis();
+                        lastReadTimestamp = System.currentTimeMillis();
                         writeToFile(bufferedWriter, number);
                     } else {
-                        forceFlushAfterInactivity(bufferedWriter, lastRead);
+                        forceFlushAfterInactivity(bufferedWriter, lastReadTimestamp);
                     }
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -110,7 +114,7 @@ public class TcpNumbers {
     }
 
     private void forceFlushAfterInactivity(BufferedWriter bufferedWriter, long lastRead) throws IOException {
-        boolean forceFlush = (System.currentTimeMillis() - lastRead) > 1000;
+        boolean forceFlush = (System.currentTimeMillis() - lastRead) > INACTIVITY_TO_FLUSH_MILLIS;
         if (forceFlush) {
             bufferedWriter.flush();
         }

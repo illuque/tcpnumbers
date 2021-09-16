@@ -8,7 +8,7 @@ public class Application {
     private static final int MAX_CLIENTS = 5;
 
     public static void main(String[] args) throws IOException {
-        new TcpNumbers(PORT, MAX_CLIENTS).start();
+        TcpNumbers.create(PORT, MAX_CLIENTS).start();
     }
 
 }

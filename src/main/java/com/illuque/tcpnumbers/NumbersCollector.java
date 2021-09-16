@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
-// TODO:I properly test
 public class NumbersCollector {
 
     private final AtomicInteger totalUniqueNumbers;
@@ -17,13 +16,8 @@ public class NumbersCollector {
     private final Set<Integer> uniqueNumbersSet;
     private final BlockingQueue<Integer> numbersQueue;
 
-    private static NumbersCollector instance;
-
-    public static NumbersCollector getInstance() {
-        if (instance == null) {
-            instance = new NumbersCollector();
-        }
-        return instance;
+    public static NumbersCollector create() {
+        return new NumbersCollector();
     }
 
     private NumbersCollector() {

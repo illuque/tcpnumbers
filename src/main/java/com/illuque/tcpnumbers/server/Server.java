@@ -10,7 +10,6 @@ import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.*;
 
-// TODO:I Test
 public class Server {
 
     private static final int TIMEOUT_FOR_SHUTDOWN = 5;

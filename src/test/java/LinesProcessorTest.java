@@ -1,21 +1,21 @@
-import com.illuque.tcpnumbers.client.ClientResult;
 import com.illuque.tcpnumbers.LinesProcessor;
 import com.illuque.tcpnumbers.NumbersCollector;
+import com.illuque.tcpnumbers.client.ClientResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Scanner;
-import java.util.stream.Collectors;
 
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
 class LinesProcessorTest {
 
     public static final String TERMINATE_SEQUENCE = "terminate";
@@ -30,85 +30,52 @@ class LinesProcessorTest {
 
     private LinesProcessor linesProcessorToTest;
 
-    private ByteArrayOutputStream outputStream;
-
-    private OutputStreamWriter outputStreamWriter;
-
     @Mock
     private NumbersCollector numbersCollector;
 
     @BeforeEach
     private void init() {
-        outputStream = new ByteArrayOutputStream();
-        outputStreamWriter = new OutputStreamWriter(outputStream);
         linesProcessorToTest = LinesProcessor.create(TERMINATE_SEQUENCE, numbersCollector);
     }
 
     @Test
     void read_whenNoLinesReceived_thenNothingReturned() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(new String[]{}));
-
         ClientResult clientResult = linesProcessorToTest.read(scanner);
-        outputStreamWriter.flush();
-
+        verify(numbersCollector, never()).add(anyInt());
         Assertions.assertEquals(ClientResult.READ_EXHAUSTED, clientResult);
-        Assertions.assertEquals("", outputStream.toString());
     }
 
     @Test
-    void read_whenTerminateReceived_thenLinesBeforeItReturned() throws IOException {
+    void read_whenTerminateReceived_thenLinesBeforeItAdded() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_TERMINATION));
-
         ClientResult clientResult = linesProcessorToTest.read(scanner);
-        outputStreamWriter.flush();
-
-        List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_WITH_TERMINATION, 0, 2));
-        String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
-
+        verify(numbersCollector, times(2)).add(anyInt());
         Assertions.assertEquals(ClientResult.FORCED_TERMINATION, clientResult);
-        Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
     @Test
-    void read_whenFakeTerminateReceived_thenLinesBeforeItReturned() throws IOException {
+    void read_whenFakeTerminateReceived_thenLinesBeforeItAdded() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_FAKE_TERMINATION));
-
         ClientResult clientResult = linesProcessorToTest.read(scanner);
-        outputStreamWriter.flush();
-
-        List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_WITH_TERMINATION, 0, 2));
-        String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
-
+        verify(numbersCollector, times(2)).add(anyInt());
         Assertions.assertEquals(ClientResult.INVALID_INPUT, clientResult);
-        Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
     @Test
-    void read_whenInvalidInputReceived_thenLinesBeforeItReturned() throws IOException {
-        Scanner scanner = new Scanner(getAsByteArray(INPUT_WITH_FAKE_TERMINATION));
-
+    void read_whenInvalidInputReceived_thenLinesBeforeItAdded() throws IOException {
+        Scanner scanner = new Scanner(getAsByteArray(INPUT_INVALID));
         ClientResult clientResult = linesProcessorToTest.read(scanner);
-        outputStreamWriter.flush();
-
-        List<String> validLines = Arrays.asList(Arrays.copyOfRange(INPUT_INVALID, 0, 2));
-        String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
-
+        verify(numbersCollector, times(2)).add(anyInt());
         Assertions.assertEquals(ClientResult.INVALID_INPUT, clientResult);
-        Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
     @Test
-    void read_whenNoTerminateReceived_thenAllLinesReturned() throws IOException {
+    void read_whenNoTerminateReceived_thenAllLinesAdded() throws IOException {
         Scanner scanner = new Scanner(getAsByteArray(INPUT_WITHOUT_TERMINATION));
-
         ClientResult clientResult = linesProcessorToTest.read(scanner);
-        outputStreamWriter.flush();
-
-        List<String> validLines = Arrays.asList(INPUT_WITHOUT_TERMINATION);
-        String expectedNumbers = validLines.stream().collect(Collectors.joining(System.lineSeparator())) + System.lineSeparator();
-
+        verify(numbersCollector, times(INPUT_WITHOUT_TERMINATION.length)).add(anyInt());
         Assertions.assertEquals(ClientResult.READ_EXHAUSTED, clientResult);
-        Assertions.assertEquals(expectedNumbers, outputStream.toString());
     }
 
     private ByteArrayInputStream getAsByteArray(String[] input) {
