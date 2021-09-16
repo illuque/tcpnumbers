@@ -26,7 +26,7 @@ class ClientTest {
     private Socket mockClientSocket;
 
     @Mock
-    private LinesReader linesReader;
+    private LinesProcessor linesProcessor;
 
     private Client clientToTest;
 
@@ -42,7 +42,7 @@ class ClientTest {
 
         when(mockClientSocket.isClosed()).thenReturn(false);
 
-        clientToTest = Client.create("#1", mockClientSocket, linesReader);
+        clientToTest = Client.create("#1", mockClientSocket, linesProcessor);
     }
 
     @AfterEach

@@ -18,19 +18,19 @@ public class Server {
 
     private final List<Client> activeClients;
 
-    private final LinesReader linesReader;
+    private final LinesProcessor linesProcessor;
 
-    public static Server create(int port, int maxClients, LinesReader linesReader) {
-        return new Server(port, maxClients, linesReader);
+    public static Server create(int port, int maxClients, LinesProcessor linesProcessor) {
+        return new Server(port, maxClients, linesProcessor);
     }
 
-    private Server(int port, int maxClients, LinesReader linesReader) {
+    private Server(int port, int maxClients, LinesProcessor linesProcessor) {
         this.maxClients = maxClients;
 
         this.serverSocket = createSocket(port);
         this.clientExecutorService = Executors.newFixedThreadPool(maxClients);
 
-        this.linesReader = linesReader;
+        this.linesProcessor = linesProcessor;
 
         this.activeClients = new CopyOnWriteArrayList<>();
     }
@@ -38,7 +38,8 @@ public class Server {
     public void start() {
         try {
             initClientStatusListenerThread();
-            initClientConnectionsListenerThread();
+
+            listenClientConnections();
 
             boolean allFinished = clientExecutorService.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.SECONDS);
             if (!allFinished) {
@@ -78,7 +79,7 @@ public class Server {
         statusListenerThread.start();
     }
 
-    private void initClientConnectionsListenerThread() throws IOException {
+    private void listenClientConnections() throws IOException {
         int i = 0;
         while (true) {
             i++;
@@ -88,7 +89,7 @@ public class Server {
             try {
                 clientSocket = serverSocket.accept();
             } catch (SocketException se) {
-                System.out.printf("Server was closed by one of the clients%s", System.lineSeparator());
+                System.out.printf("Client requested termination%s", System.lineSeparator());
                 return;
             }
 
@@ -96,7 +97,7 @@ public class Server {
             if (maxClientsReached) {
                 rejectClient(clientSocket);
             } else {
-                acceptClient(clientName, clientSocket);
+                acceptAndStartClient(clientName, clientSocket);
             }
         }
     }
@@ -129,27 +130,31 @@ public class Server {
         }
     }
 
-    private void acceptClient(String clientName, Socket clientSocket) {
-        Client client = Client.create(clientName, clientSocket, linesReader);
+    private void acceptAndStartClient(String clientName, Socket clientSocket) {
+        Client client = Client.create(clientName, clientSocket, linesProcessor);
         client.schedule(clientExecutorService);
         activeClients.add(client);
     }
 
     public synchronized void shutDown() {
         try {
-            // stop receiving new tasks
+            // stop receiving new tasks/clients
             clientExecutorService.shutdown();
-
-            // disconnect server => will stop receiving messages
-            serverSocket.close();
 
             for (Client client : activeClients) {
                 client.disconnect();
             }
 
-            activeClients.clear();
+            boolean gracefulShutDown = clientExecutorService.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.SECONDS);
+            if (!gracefulShutDown) {
+                System.err.println("Not all Clients finished gracefully");
+            }
+
+            serverSocket.close();
+        } catch (InterruptedException e) {
+            System.err.println("Error awaiting client termination: " + e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error closing server: " + e.getMessage());
         }
     }
 

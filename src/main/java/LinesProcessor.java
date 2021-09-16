@@ -1,23 +1,20 @@
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.util.Scanner;
 
-public class LinesReader {
+public class LinesProcessor {
 
     private static final int VALID_INPUT_LENGTH = 9;
 
     private final String terminateSequence;
     private final NumbersApprover numbersApprover;
-    private final OutputStreamWriter outputStreamWriter;
 
-    public static LinesReader create(String terminateSequence, NumbersApprover numbersApprover, OutputStreamWriter outputStreamWriter) {
-        return new LinesReader(terminateSequence, numbersApprover, outputStreamWriter);
+    public static LinesProcessor create(String terminateSequence, NumbersApprover numbersApprover) {
+        return new LinesProcessor(terminateSequence, numbersApprover);
     }
 
-    private LinesReader(String terminateSequence, NumbersApprover numbersApprover, OutputStreamWriter outputStreamWriter) {
+    private LinesProcessor(String terminateSequence, NumbersApprover numbersApprover) {
         this.terminateSequence = terminateSequence;
         this.numbersApprover = numbersApprover;
-        this.outputStreamWriter = outputStreamWriter;
     }
 
     public ClientResult read(Scanner inputScanner) throws IOException {
@@ -39,11 +36,7 @@ public class LinesReader {
                 return ClientResult.INVALID_INPUT;
             }
 
-            boolean accepted = numbersApprover.add(validNumber);
-            if (accepted) {
-                String logLine = validNumber + System.lineSeparator();
-                outputStreamWriter.append(logLine);
-            }
+            numbersApprover.add(validNumber);
         }
 
         return ClientResult.READ_EXHAUSTED;

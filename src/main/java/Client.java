@@ -11,17 +11,17 @@ public class Client implements Callable<ClientResult> {
 
     private final String name;
     private final Socket socket;
-    private final LinesReader linesReader;
+    private final LinesProcessor linesProcessor;
     private Future<ClientResult> future;
 
-    public static Client create(String name, Socket clientSocket, LinesReader linesReader) {
-        return new Client(name, clientSocket, linesReader);
+    public static Client create(String name, Socket clientSocket, LinesProcessor linesProcessor) {
+        return new Client(name, clientSocket, linesProcessor);
     }
 
-    private Client(String name, Socket clientSocket, LinesReader linesReader) {
+    private Client(String name, Socket clientSocket, LinesProcessor linesProcessor) {
         this.name = name;
         this.socket = clientSocket;
-        this.linesReader = linesReader;
+        this.linesProcessor = linesProcessor;
         System.out.printf("Client %s connected%s", this.name, System.lineSeparator());
     }
 
@@ -37,7 +37,7 @@ public class Client implements Callable<ClientResult> {
         }
 
         try (Scanner inputScanner = new Scanner(socket.getInputStream(), StandardCharsets.UTF_8)) {
-            return linesReader.read(inputScanner);
+            return linesProcessor.read(inputScanner);
         } catch (IOException e) {
             e.printStackTrace();
             return ClientResult.ERROR_READING;
