@@ -1,3 +1,6 @@
+package com.illuque.tcpnumbers.client;
+
+import com.illuque.tcpnumbers.LinesProcessor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

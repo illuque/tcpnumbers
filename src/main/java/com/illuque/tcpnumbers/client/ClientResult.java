@@ -1,3 +1,5 @@
+package com.illuque.tcpnumbers.client;
+
 public enum ClientResult {
 
     CLIENT_DISCONNECTED,

@@ -1,13 +1,14 @@
+package com.illuque.tcpnumbers;
+
 import java.util.Collections;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
 // TODO:I properly test
-public class NumbersApprover {
+public class NumbersCollector {
 
     private final AtomicInteger totalUniqueNumbers;
     private final AtomicInteger uniqueNumbersInRound;
@@ -16,16 +17,16 @@ public class NumbersApprover {
     private final Set<Integer> uniqueNumbersSet;
     private final BlockingQueue<Integer> numbersQueue;
 
-    private static NumbersApprover instance;
+    private static NumbersCollector instance;
 
-    public static NumbersApprover getInstance() {
+    public static NumbersCollector getInstance() {
         if (instance == null) {
-            instance = new NumbersApprover();
+            instance = new NumbersCollector();
         }
         return instance;
     }
 
-    private NumbersApprover() {
+    private NumbersCollector() {
         this.uniqueNumbersSet = Collections.newSetFromMap(new ConcurrentHashMap<>());
         this.totalUniqueNumbers = new AtomicInteger(0);
         this.uniqueNumbersInRound = new AtomicInteger(0);

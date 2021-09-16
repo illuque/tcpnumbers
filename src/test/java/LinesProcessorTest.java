@@ -1,3 +1,6 @@
+import com.illuque.tcpnumbers.client.ClientResult;
+import com.illuque.tcpnumbers.LinesProcessor;
+import com.illuque.tcpnumbers.NumbersCollector;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,15 +35,13 @@ class LinesProcessorTest {
     private OutputStreamWriter outputStreamWriter;
 
     @Mock
-    private NumbersApprover numbersApprover;
-
-    // TODO:I check for duplicates
+    private NumbersCollector numbersCollector;
 
     @BeforeEach
     private void init() {
         outputStream = new ByteArrayOutputStream();
         outputStreamWriter = new OutputStreamWriter(outputStream);
-        linesProcessorToTest = LinesProcessor.create(TERMINATE_SEQUENCE, numbersApprover);
+        linesProcessorToTest = LinesProcessor.create(TERMINATE_SEQUENCE, numbersCollector);
     }
 
     @Test

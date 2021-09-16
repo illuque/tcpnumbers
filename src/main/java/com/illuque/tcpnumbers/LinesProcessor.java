@@ -1,3 +1,7 @@
+package com.illuque.tcpnumbers;
+
+import com.illuque.tcpnumbers.client.ClientResult;
+
 import java.io.IOException;
 import java.util.Scanner;
 
@@ -6,15 +10,15 @@ public class LinesProcessor {
     private static final int VALID_INPUT_LENGTH = 9;
 
     private final String terminateSequence;
-    private final NumbersApprover numbersApprover;
+    private final NumbersCollector numbersCollector;
 
-    public static LinesProcessor create(String terminateSequence, NumbersApprover numbersApprover) {
-        return new LinesProcessor(terminateSequence, numbersApprover);
+    public static LinesProcessor create(String terminateSequence, NumbersCollector numbersCollector) {
+        return new LinesProcessor(terminateSequence, numbersCollector);
     }
 
-    private LinesProcessor(String terminateSequence, NumbersApprover numbersApprover) {
+    private LinesProcessor(String terminateSequence, NumbersCollector numbersCollector) {
         this.terminateSequence = terminateSequence;
-        this.numbersApprover = numbersApprover;
+        this.numbersCollector = numbersCollector;
     }
 
     public ClientResult read(Scanner inputScanner) throws IOException {
@@ -36,7 +40,7 @@ public class LinesProcessor {
                 return ClientResult.INVALID_INPUT;
             }
 
-            numbersApprover.add(validNumber);
+            numbersCollector.add(validNumber);
         }
 
         return ClientResult.READ_EXHAUSTED;

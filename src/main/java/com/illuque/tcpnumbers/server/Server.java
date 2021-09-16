@@ -1,3 +1,8 @@
+package com.illuque.tcpnumbers.server;
+
+import com.illuque.tcpnumbers.LinesProcessor;
+import com.illuque.tcpnumbers.client.Client;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
