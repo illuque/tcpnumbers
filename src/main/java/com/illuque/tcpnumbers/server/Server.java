@@ -6,13 +6,13 @@ import com.illuque.tcpnumbers.client.Client;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.*;
 
 public class Server {
 
-    private static final int TIMEOUT_FOR_SHUTDOWN = 5;
+    // TODO:I decrease?
+    private static final int TIMEOUT_FOR_SHUTDOWN = 5000;
 
     private final ExecutorService clientExecutorService;
 
@@ -24,7 +24,7 @@ public class Server {
 
     private final LinesProcessor linesProcessor;
 
-    private volatile boolean disconnectionReceived;
+    private volatile boolean terminationFlagReceived;
 
     public static Server create(int port, int maxClients, LinesProcessor linesProcessor) {
         return new Server(port, maxClients, linesProcessor);
@@ -39,23 +39,13 @@ public class Server {
         this.linesProcessor = linesProcessor;
 
         this.activeClients = new CopyOnWriteArrayList<>();
+
+        terminationFlagReceived = false;
     }
 
     public void start() {
-        try {
-            disconnectionReceived = false;
-
-            initClientStatusListenerThread();
-
-            listenClientConnections();
-
-            boolean allFinished = clientExecutorService.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.SECONDS);
-            if (!allFinished) {
-                System.err.println("Not all Clients finished gracefully");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        initClientStatusListenerThread();
+        listenClientConnections();
     }
 
     private ServerSocket createSocket(int port) {
@@ -63,12 +53,13 @@ public class Server {
         try {
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not start server: " + e.getMessage());
             System.exit(-1);
         }
         return serverSocket;
     }
 
+    // TODO:I ver si meter estos tb en un executor
     private void initClientStatusListenerThread() {
         Thread statusListenerThread = new Thread(() -> {
             while (true) {
@@ -77,7 +68,7 @@ public class Server {
                         activeClients.remove(client);
                     }
                     if (clientForcedTermination(client)) {
-                        disconnectionReceived = true;
+                        terminationFlagReceived = true;
                         shutDown();
                         return;
                     }
@@ -88,7 +79,7 @@ public class Server {
         statusListenerThread.start();
     }
 
-    private void listenClientConnections() throws IOException {
+    private void listenClientConnections() {
         int i = 0;
         while (true) {
             i++;
@@ -97,19 +88,19 @@ public class Server {
             Socket clientSocket;
             try {
                 clientSocket = serverSocket.accept();
-            } catch (SocketException se) {
-                if (disconnectionReceived) {
+            } catch (IOException se) {
+                if (terminationFlagReceived) {
                     // shutDown() was called and the serverSocket.close() caused this exception
-                    System.out.printf("Client requested termination, closing server%s", System.lineSeparator());
+                    System.out.println("Client requested termination, server will reject new clients...");
                 } else {
-                    System.err.printf("Server was unexpectedly closed: %s%s", se.getMessage(), System.lineSeparator());
+                    System.err.println("Server was unexpectedly closed: " + se.getMessage());
                 }
                 return;
             }
 
             boolean maxClientsReached = activeClients.size() == maxClients;
             if (maxClientsReached) {
-                rejectClient(clientSocket);
+                rejectClient(clientName, clientSocket);
             } else {
                 acceptClient(clientName, clientSocket);
             }
@@ -120,7 +111,7 @@ public class Server {
         try {
             return client.isDone();
         } catch (ExecutionException | InterruptedException e) {
-            e.printStackTrace();
+            System.err.println("Could not check client completion: " + e.getMessage());
         }
         return false;
     }
@@ -131,16 +122,17 @@ public class Server {
                 return true;
             }
         } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
+            System.err.println("Error checking client termination: " + e.getMessage());
         }
         return false;
     }
 
-    private void rejectClient(Socket clientSocket) {
+    private void rejectClient(String clientName, Socket clientSocket) {
         try {
             clientSocket.close();
+            System.out.printf("Client %s rejected%s", clientName, System.lineSeparator());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error closing client socket: " + e.getMessage());
         }
     }
 
@@ -148,6 +140,7 @@ public class Server {
         Client client = Client.create(clientName, clientSocket, linesProcessor);
         client.schedule(clientExecutorService);
         activeClients.add(client);
+        System.out.printf("Client %s connected%s", clientName, System.lineSeparator());
     }
 
     public synchronized void shutDown() {
@@ -159,7 +152,7 @@ public class Server {
                 client.disconnect();
             }
 
-            boolean gracefulShutDown = clientExecutorService.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.SECONDS);
+            boolean gracefulShutDown = clientExecutorService.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.MILLISECONDS);
             if (!gracefulShutDown) {
                 System.err.println("Not all Clients finished gracefully");
             }

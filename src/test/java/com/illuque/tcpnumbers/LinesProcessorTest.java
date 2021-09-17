@@ -97,7 +97,7 @@ class LinesProcessorTest {
                 try {
                     Thread.sleep(messageThroughputInMillis);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    System.err.println("Thread could not sleep: " + e.getMessage());
                 }
             }
         });

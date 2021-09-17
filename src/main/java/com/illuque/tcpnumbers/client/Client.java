@@ -26,7 +26,6 @@ public class Client implements Callable<ClientResult> {
         this.name = name;
         this.socket = clientSocket;
         this.linesProcessor = linesProcessor;
-        System.out.printf("Client %s connected%s", this.name, System.lineSeparator());
     }
 
     public void schedule(ExecutorService executorService) {
@@ -43,7 +42,7 @@ public class Client implements Callable<ClientResult> {
         try (Scanner inputScanner = new Scanner(socket.getInputStream(), StandardCharsets.UTF_8)) {
             return linesProcessor.read(inputScanner);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Error reading line: " + e.getMessage());
             return ClientResult.ERROR_READING;
         }
     }
