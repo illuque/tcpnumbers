@@ -92,12 +92,12 @@ Run automated tests with the following comments:
 On UNIX systems, performance and load tests can be run as well.<br/><br/>
 For that, generate _N_ seed files with the following script. Note: _N_ configurable within the script
    ```sh
-   sh load_test/seed.sh
+   cd load_test ; sh seed.sh
    ```
 
 Start sending numbers from _N_ clients to the App with the following script. Numbers are read from previous seed files. Note: _N_ configurable within the script, but the App accepts 5 concurrent clients.<br/>
    ```sh
-   sh load_test/send_messages.sh
+   cd load_test ; sh send_messages.sh
    ```
 
 ## License
