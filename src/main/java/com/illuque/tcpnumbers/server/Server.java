@@ -11,7 +11,6 @@ import java.util.concurrent.*;
 
 public class Server {
 
-    // TODO:I decrease?
     private static final int TIMEOUT_FOR_SHUTDOWN = 5000;
 
     private final ExecutorService clientExecutorService;
@@ -59,7 +58,6 @@ public class Server {
         return serverSocket;
     }
 
-    // TODO:I ver si meter estos tb en un executor
     private void initClientStatusListenerThread() {
         Thread statusListenerThread = new Thread(() -> {
             while (true) {
