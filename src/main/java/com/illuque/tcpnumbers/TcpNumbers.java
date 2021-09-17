@@ -16,7 +16,6 @@ public class TcpNumbers {
     private static final int REPORT_FREQUENCY = 10 * 1000;
 
     private static final String TERMINATION_SEQUENCE = "terminate";
-    private static final int INACTIVITY_TO_FLUSH = 1000;
 
     private static final int TIMEOUT_FOR_SHUTDOWN = REPORT_FREQUENCY + 100;
 
@@ -52,6 +51,8 @@ public class TcpNumbers {
 
             server.start();
 
+            bufferedFileWriter.flush();
+
             keepRunning = false;
             consumersExecutor.shutdown();
 
@@ -68,15 +69,11 @@ public class TcpNumbers {
 
     private Runnable buildFileWriterConsumer(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {
         return () -> {
-            long lastReadTimestamp = -1;
             while (keepRunning) {
                 Integer number = numbersCollector.pollNumber();
                 try {
                     if (number != null) {
-                        lastReadTimestamp = System.currentTimeMillis();
                         writeToFile(bufferedWriter, number);
-                    } else {
-                        forceFlushAfterInactivity(bufferedWriter, lastReadTimestamp);
                     }
                 } catch (IOException e) {
                     System.err.println("Error writing to file: " + e.getMessage());
@@ -121,13 +118,6 @@ public class TcpNumbers {
         }
 
         return outputFile;
-    }
-
-    private void forceFlushAfterInactivity(BufferedWriter bufferedWriter, long lastRead) throws IOException {
-        boolean forceFlush = (System.currentTimeMillis() - lastRead) > INACTIVITY_TO_FLUSH;
-        if (forceFlush) {
-            bufferedWriter.flush();
-        }
     }
 
 }
