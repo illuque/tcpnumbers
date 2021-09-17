@@ -1,4 +1,4 @@
-import com.illuque.tcpnumbers.TcpNumbers;
+import com.illuque.tcpnumbers.TcpNumbersApp;
 
 import java.io.IOException;
 
@@ -12,7 +12,7 @@ public class Application {
         System.out.println("Starting application...");
         System.out.println();
 
-        TcpNumbers.create(PORT, MAX_CLIENTS).start();
+        TcpNumbersApp.create(PORT, MAX_CLIENTS).start();
 
         System.out.println();
         System.out.println("Application finished...");

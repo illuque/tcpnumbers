@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-public class TcpNumbers {
+public class TcpNumbersApp {
 
     protected static final String OUTPUT_FILENAME = "numbers.log";
     private static final int REPORT_FREQUENCY = 10 * 1000;
@@ -23,13 +23,13 @@ public class TcpNumbers {
 
     private final Server server;
 
-    private NumbersCollector numbersCollector;
+    private final NumbersCollector numbersCollector;
 
-    public static TcpNumbers create(int port, int maxClients) {
-        return new TcpNumbers(port, maxClients);
+    public static TcpNumbersApp create(int port, int maxClients) {
+        return new TcpNumbersApp(port, maxClients);
     }
 
-    private TcpNumbers(int port, int maxClients) {
+    private TcpNumbersApp(int port, int maxClients) {
         this.numbersCollector = NumbersCollector.create();
 
         LinesProcessor linesProcessor = LinesProcessor.create(TERMINATION_SEQUENCE, this.numbersCollector);
@@ -39,33 +39,48 @@ public class TcpNumbers {
 
     public void start() throws IOException, InterruptedException {
         try (BufferedWriter bufferedFileWriter = generateBufferedFileWriter()) {
-            keepRunning = true;
 
-            ExecutorService consumersExecutor = Executors.newFixedThreadPool(2);
+            ExecutorService consumersExecutor = setUpConsumers(bufferedFileWriter);
 
-            consumersExecutor.submit(buildFileWriterConsumer(bufferedFileWriter, numbersCollector));
-            consumersExecutor.submit(buildReporterConsumerThread(numbersCollector));
+            runServerUntilDisconnected();
 
-            waitForServerShutdown(server);
-
-            bufferedFileWriter.flush();
-
-            keepRunning = false;
-            consumersExecutor.shutdown();
-
-            System.out.println();
-            System.out.println("Shutting down...");
-            System.out.println();
-
-            boolean gracefulShutDown = consumersExecutor.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.MILLISECONDS);
-            if (!gracefulShutDown) {
-                System.err.println("Not all consumers finished gracefully");
-            }
+            shutDownGracefully(consumersExecutor, bufferedFileWriter);
         }
     }
 
-    private void waitForServerShutdown(Server server) {
+    private ExecutorService setUpConsumers(BufferedWriter bufferedFileWriter) {
+        keepRunning = true;
+
+        ExecutorService consumersExecutor = Executors.newFixedThreadPool(2);
+        consumersExecutor.submit(buildFileWriterConsumer(bufferedFileWriter, numbersCollector));
+        consumersExecutor.submit(buildReporterConsumerThread(numbersCollector));
+
+        return consumersExecutor;
+    }
+
+    private void runServerUntilDisconnected() {
         server.start();
+    }
+
+    private void shutDownGracefully(ExecutorService consumersExecutor, BufferedWriter bufferedFileWriter) throws InterruptedException, IOException {
+        keepRunning = false;
+
+        writeRemainingBytesToFile(bufferedFileWriter);
+
+        consumersExecutor.shutdown();
+
+        System.out.println();
+        System.out.println("Shutting down...");
+        System.out.println();
+
+        boolean gracefulShutDown = consumersExecutor.awaitTermination(TIMEOUT_FOR_SHUTDOWN, TimeUnit.MILLISECONDS);
+        if (!gracefulShutDown) {
+            System.err.println("Not all consumers finished gracefully");
+        }
+    }
+
+    private void writeRemainingBytesToFile(BufferedWriter bufferedFileWriter) throws IOException {
+        bufferedFileWriter.flush();
     }
 
     private Runnable buildFileWriterConsumer(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {

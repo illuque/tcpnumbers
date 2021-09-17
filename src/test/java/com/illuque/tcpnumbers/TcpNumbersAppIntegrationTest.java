@@ -16,18 +16,18 @@ import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class TcpNumbersIntegrationTest {
+class TcpNumbersAppIntegrationTest {
 
     private static final int PORT = 4001;
     private static final int MAX_CLIENTS = 2;
 
     @Test
     void IT_fileCreatedCorrectly() throws IOException, InterruptedException {
-        TcpNumbers tcpNumbers = TcpNumbers.create(PORT, MAX_CLIENTS);
+        TcpNumbersApp tcpNumbersApp = TcpNumbersApp.create(PORT, MAX_CLIENTS);
 
         ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-        Runnable serverRunnable = () -> assertDoesNotThrow(tcpNumbers::start);
+        Runnable serverRunnable = () -> assertDoesNotThrow(tcpNumbersApp::start);
 
         executorService.submit(serverRunnable);
 
@@ -71,7 +71,7 @@ class TcpNumbersIntegrationTest {
 
         assertDoesNotThrow(() -> executorService.awaitTermination(500, TimeUnit.MILLISECONDS));
 
-        String lines = Files.lines(Paths.get(TcpNumbers.OUTPUT_FILENAME), StandardCharsets.UTF_8).collect(Collectors.joining("\n"));
+        String lines = Files.lines(Paths.get(TcpNumbersApp.OUTPUT_FILENAME), StandardCharsets.UTF_8).collect(Collectors.joining("\n"));
         assertEquals("111111111\n222222222\n333333333\n444444444", lines);
     }
 
