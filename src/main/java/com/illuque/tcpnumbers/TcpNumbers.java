@@ -21,27 +21,24 @@ public class TcpNumbers {
 
     private volatile boolean keepRunning;
 
-    private final int port;
+    private final Server server;
 
-    private final int maxClients;
+    private NumbersCollector numbersCollector;
 
     public static TcpNumbers create(int port, int maxClients) {
         return new TcpNumbers(port, maxClients);
     }
 
     private TcpNumbers(int port, int maxClients) {
-        this.port = port;
-        this.maxClients = maxClients;
+        this.numbersCollector = NumbersCollector.create();
+
+        LinesProcessor linesProcessor = LinesProcessor.create(TERMINATION_SEQUENCE, this.numbersCollector);
+
+        this.server = Server.create(port, maxClients, linesProcessor);
     }
 
     public void start() throws IOException, InterruptedException {
         try (BufferedWriter bufferedFileWriter = generateBufferedFileWriter()) {
-            NumbersCollector numbersCollector = NumbersCollector.create();
-
-            LinesProcessor linesProcessor = LinesProcessor.create(TERMINATION_SEQUENCE, numbersCollector);
-
-            Server server = Server.create(port, maxClients, linesProcessor);
-
             keepRunning = true;
 
             ExecutorService consumersExecutor = Executors.newFixedThreadPool(2);
@@ -49,7 +46,7 @@ public class TcpNumbers {
             consumersExecutor.submit(buildFileWriterConsumer(bufferedFileWriter, numbersCollector));
             consumersExecutor.submit(buildReporterConsumerThread(numbersCollector));
 
-            server.start();
+            waitForServerShutdown(server);
 
             bufferedFileWriter.flush();
 
@@ -65,6 +62,10 @@ public class TcpNumbers {
                 System.err.println("Not all consumers finished gracefully");
             }
         }
+    }
+
+    private void waitForServerShutdown(Server server) {
+        server.start();
     }
 
     private Runnable buildFileWriterConsumer(BufferedWriter bufferedWriter, NumbersCollector numbersCollector) {
